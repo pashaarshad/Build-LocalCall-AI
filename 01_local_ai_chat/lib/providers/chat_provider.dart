@@ -2,45 +2,72 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/chat_message.dart';
 import '../models/chat_session.dart';
+import '../services/database_helper.dart';
 import '../services/storage_service.dart';
 import 'settings_provider.dart';
 
 class ChatProvider with ChangeNotifier {
   final StorageService _storage;
   final SettingsProvider _settingsProvider;
+  final DatabaseHelper _dbHelper;
 
   List<ChatSession> _sessions = [];
   late ChatSession _currentSession;
   bool _isGenerating = false;
+  bool _isDbReady = false;
   StreamSubscription<String>? _streamSub;
 
-  ChatProvider(this._storage, this._settingsProvider) {
-    _loadInitialSessions();
+  ChatProvider(this._storage, this._settingsProvider, [DatabaseHelper? dbHelper])
+      : _dbHelper = dbHelper ?? DatabaseHelper() {
+    _initDatabaseAndSessions();
   }
 
   List<ChatSession> get sessions => _sessions;
   ChatSession get currentSession => _currentSession;
   List<ChatMessage> get messages => _currentSession.messages;
   bool get isGenerating => _isGenerating;
+  bool get isDbReady => _isDbReady;
 
-  void _loadInitialSessions() {
-    _sessions = _storage.loadSessions();
-    final savedActiveId = _storage.getActiveSessionId();
-
-    if (_sessions.isNotEmpty) {
-      if (savedActiveId != null) {
-        _currentSession = _sessions.firstWhere(
-          (s) => s.id == savedActiveId,
-          orElse: () => _sessions.first,
-        );
+  Future<void> _initDatabaseAndSessions() async {
+    try {
+      final dbSessions = await _dbHelper.getSessions();
+      if (dbSessions.isNotEmpty) {
+        _sessions = dbSessions;
       } else {
-        _currentSession = _sessions.first;
+        // Fall back to SharedPreferences if database is empty
+        _sessions = _storage.loadSessions();
+        for (final s in _sessions) {
+          await _dbHelper.insertSession(s);
+          for (final m in s.messages) {
+            await _dbHelper.insertMessage(s.id, m);
+          }
+        }
       }
-    } else {
+
+      final savedActiveId = _storage.getActiveSessionId();
+      if (_sessions.isNotEmpty) {
+        if (savedActiveId != null) {
+          _currentSession = _sessions.firstWhere(
+            (s) => s.id == savedActiveId,
+            orElse: () => _sessions.first,
+          );
+        } else {
+          _currentSession = _sessions.first;
+        }
+      } else {
+        _currentSession = _createNewSessionInstance();
+        _sessions.add(_currentSession);
+        await _dbHelper.insertSession(_currentSession);
+        await _storage.setActiveSessionId(_currentSession.id);
+      }
+      _isDbReady = true;
+      notifyListeners();
+    } catch (_) {
+      // In-memory fallback if SQLite fails on certain desktop test environments
       _currentSession = _createNewSessionInstance();
-      _sessions.add(_currentSession);
-      _storage.saveSessions(_sessions);
-      _storage.setActiveSessionId(_currentSession.id);
+      _sessions = [_currentSession];
+      _isDbReady = true;
+      notifyListeners();
     }
   }
 
@@ -58,8 +85,12 @@ class ChatProvider with ChangeNotifier {
     final newSession = _createNewSessionInstance();
     _sessions.insert(0, newSession);
     _currentSession = newSession;
-    await _storage.saveSessions(_sessions);
-    await _storage.setActiveSessionId(newSession.id);
+
+    try {
+      await _dbHelper.insertSession(newSession);
+      await _storage.setActiveSessionId(newSession.id);
+    } catch (_) {}
+
     notifyListeners();
   }
 
@@ -69,7 +100,11 @@ class ChatProvider with ChangeNotifier {
     }
     final target = _sessions.firstWhere((s) => s.id == sessionId);
     _currentSession = target;
-    await _storage.setActiveSessionId(target.id);
+
+    try {
+      await _storage.setActiveSessionId(target.id);
+    } catch (_) {}
+
     notifyListeners();
   }
 
@@ -84,7 +119,11 @@ class ChatProvider with ChangeNotifier {
       }
       await _storage.setActiveSessionId(_currentSession.id);
     }
-    await _storage.saveSessions(_sessions);
+
+    try {
+      await _dbHelper.deleteSession(sessionId);
+    } catch (_) {}
+
     notifyListeners();
   }
 
@@ -95,7 +134,12 @@ class ChatProvider with ChangeNotifier {
     _currentSession.messages.clear();
     _currentSession.title = 'New Conversation';
     _currentSession.updatedAt = DateTime.now();
-    await _saveCurrentState();
+
+    try {
+      await _dbHelper.clearMessagesForSession(_currentSession.id);
+      await _dbHelper.updateSession(_currentSession);
+    } catch (_) {}
+
     notifyListeners();
   }
 
@@ -112,9 +156,16 @@ class ChatProvider with ChangeNotifier {
 
     // Update conversation title if first message
     if (_currentSession.messages.where((m) => m.isUser).length == 1) {
-      _currentSession.title = clean.length > 32 ? '${clean.substring(0, 32)}...' : clean;
+      _currentSession.title =
+          clean.length > 32 ? '${clean.substring(0, 32)}...' : clean;
     }
     _currentSession.updatedAt = DateTime.now();
+
+    // Insert user message into SQLite
+    try {
+      await _dbHelper.insertMessage(_currentSession.id, userMessage);
+      await _dbHelper.updateSession(_currentSession);
+    } catch (_) {}
 
     // Prepare assistant streaming placeholder
     final assistantMessage = ChatMessage(
@@ -131,8 +182,9 @@ class ChatProvider with ChangeNotifier {
     final stopwatch = Stopwatch()..start();
 
     try {
-      final stream = _settingsProvider.ollamaService.generateStream(
-        history: _currentSession.messages.sublist(0, _currentSession.messages.length - 1),
+      final stream = _settingsProvider.activeService.generateStream(
+        history: _currentSession.messages
+            .sublist(0, _currentSession.messages.length - 1),
         systemPrompt: _currentSession.systemPrompt.isNotEmpty
             ? _currentSession.systemPrompt
             : _settingsProvider.systemPrompt,
@@ -153,7 +205,8 @@ class ChatProvider with ChangeNotifier {
         },
         onDone: () async {
           stopwatch.stop();
-          final index = _currentSession.messages.indexWhere((m) => m.id == assistantMessage.id);
+          final index = _currentSession.messages
+              .indexWhere((m) => m.id == assistantMessage.id);
           if (index != -1) {
             _currentSession.messages[index] = assistantMessage.copyWith(
               isStreaming: false,
@@ -161,7 +214,14 @@ class ChatProvider with ChangeNotifier {
             );
           }
           _isGenerating = false;
-          await _saveCurrentState();
+
+          // Save completed assistant message to SQLite
+          try {
+            await _dbHelper.insertMessage(
+                _currentSession.id, _currentSession.messages[index]);
+            await _dbHelper.updateSession(_currentSession);
+          } catch (_) {}
+
           notifyListeners();
         },
         cancelOnError: true,
@@ -170,7 +230,6 @@ class ChatProvider with ChangeNotifier {
       assistantMessage.content = 'Failed to generate response: $e';
       assistantMessage.isStreaming = false;
       _isGenerating = false;
-      await _saveCurrentState();
       notifyListeners();
     }
   }
@@ -178,9 +237,16 @@ class ChatProvider with ChangeNotifier {
   Future<void> regenerateLastResponse() async {
     if (_isGenerating || _currentSession.messages.isEmpty) return;
 
-    // Remove last assistant message if present
     if (_currentSession.messages.last.isAssistant) {
-      _currentSession.messages.removeLast();
+      final lastMsg = _currentSession.messages.removeLast();
+      try {
+        final db = await _dbHelper.database;
+        await db.delete(
+          DatabaseHelper.tableMessages,
+          where: 'id = ?',
+          whereArgs: [lastMsg.id],
+        );
+      } catch (_) {}
     }
 
     if (_currentSession.messages.isEmpty) return;
@@ -192,9 +258,8 @@ class ChatProvider with ChangeNotifier {
 
     if (lastUserMsg.content.isEmpty) return;
 
-    // Resend
     final text = lastUserMsg.content;
-    _currentSession.messages.removeLast(); // remove to re-add cleanly via sendMessage
+    _currentSession.messages.removeLast();
     await sendMessage(text);
   }
 
@@ -203,17 +268,16 @@ class ChatProvider with ChangeNotifier {
       await _streamSub?.cancel();
       _streamSub = null;
     }
-    if (_currentSession.messages.isNotEmpty && _currentSession.messages.last.isStreaming) {
+    if (_currentSession.messages.isNotEmpty &&
+        _currentSession.messages.last.isStreaming) {
       _currentSession.messages.last.isStreaming = false;
+      try {
+        await _dbHelper.insertMessage(
+            _currentSession.id, _currentSession.messages.last);
+      } catch (_) {}
     }
     _isGenerating = false;
-    await _saveCurrentState();
     notifyListeners();
-  }
-
-  Future<void> _saveCurrentState() async {
-    _currentSession.updatedAt = DateTime.now();
-    await _storage.saveSessions(_sessions);
   }
 
   @override

@@ -51,6 +51,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Section 0: Inference Mode & SQLite Storage Status
+          Card(
+            elevation: 0,
+            color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: theme.colorScheme.primary.withOpacity(0.4),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.phone_android_rounded,
+                          color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AI Execution & Database Mode',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'SQLite on-device storage is active. All chats and context memory are kept 100% private in local_ai_chat.db on this phone.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<InferenceMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: InferenceMode.onDevice,
+                        label: Text('On-Device (Offline)'),
+                        icon: Icon(Icons.bolt_rounded, size: 16),
+                      ),
+                      ButtonSegment(
+                        value: InferenceMode.localNetwork,
+                        label: Text('Local Network / Ollama'),
+                        icon: Icon(Icons.wifi_rounded, size: 16),
+                      ),
+                    ],
+                    selected: {settings.inferenceMode},
+                    onSelectionChanged: (set) {
+                      settings.setInferenceMode(set.first);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
           // Section 1: Server Connection
           Card(
             elevation: 0,

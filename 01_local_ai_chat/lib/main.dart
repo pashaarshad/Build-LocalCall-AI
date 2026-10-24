@@ -3,14 +3,16 @@ import 'package:provider/provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/chat_screen.dart';
+import 'services/database_helper.dart';
 import 'services/ollama_service.dart';
 import 'services/storage_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize storage service
+  // Initialize storage service & SQLite database
   final storageService = await StorageService.init();
+  final dbHelper = DatabaseHelper();
   final ollamaService = OllamaService();
 
   runApp(
@@ -23,9 +25,10 @@ void main() async {
           create: (ctx) => ChatProvider(
             storageService,
             ctx.read<SettingsProvider>(),
+            dbHelper,
           ),
           update: (ctx, settings, previous) =>
-              previous ?? ChatProvider(storageService, settings),
+              previous ?? ChatProvider(storageService, settings, dbHelper),
         ),
       ],
       child: const LocalAIChatApp(),
