@@ -11,8 +11,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late TextEditingController _urlController;
+  late TextEditingController _apiKeyController;
   late TextEditingController _systemPromptController;
+  bool _obscureApiKey = true;
 
   final Map<String, String> _personaPresets = {
     'General Assistant':
@@ -27,14 +28,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     final settings = context.read<SettingsProvider>();
-    _urlController = TextEditingController(text: settings.serverUrl);
+    _apiKeyController = TextEditingController(text: settings.apiKey);
     _systemPromptController =
         TextEditingController(text: settings.systemPrompt);
   }
 
   @override
   void dispose() {
-    _urlController.dispose();
+    _apiKeyController.dispose();
     _systemPromptController.dispose();
     super.dispose();
   }
@@ -46,19 +47,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Local AI Settings'),
+        title: const Text('AI & API Settings'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Section 0: Inference Mode & SQLite Storage Status
+          // Section 1: Groq API Configuration
           Card(
             elevation: 0,
-            color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.25),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.primary.withOpacity(0.4),
+                color: theme.colorScheme.primary.withValues(alpha: 0.35),
               ),
             ),
             child: Padding(
@@ -68,114 +69,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.phone_android_rounded,
-                          color: theme.colorScheme.primary),
+                      Icon(Icons.bolt_rounded, color: theme.colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'AI Execution & Database Mode',
+                        'Groq AI Cloud Engine',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    'SQLite on-device storage is active. All chats and context memory are kept 100% private in local_ai_chat.db on this phone.',
+                    '100% Free API • Extreme Speed (500+ tok/s) • Multi-turn SQLite memory enabled.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<InferenceMode>(
-                    segments: const [
-                      ButtonSegment(
-                        value: InferenceMode.onDevice,
-                        label: Text('On-Device (Offline)'),
-                        icon: Icon(Icons.bolt_rounded, size: 16),
-                      ),
-                      ButtonSegment(
-                        value: InferenceMode.localNetwork,
-                        label: Text('Local Network / Ollama'),
-                        icon: Icon(Icons.wifi_rounded, size: 16),
-                      ),
-                    ],
-                    selected: {settings.inferenceMode},
-                    onSelectionChanged: (set) {
-                      settings.setInferenceMode(set.first);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-          // Section 1: Server Connection
-          Card(
-            elevation: 0,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.dns_rounded, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Ollama / Local LLM Server',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   TextField(
-                    controller: _urlController,
+                    controller: _apiKeyController,
+                    obscureText: _obscureApiKey,
                     decoration: InputDecoration(
-                      labelText: 'Server URL',
-                      hintText: 'http://192.168.1.xxx:11434',
+                      labelText: 'Groq API Key',
+                      hintText: 'gsk_...',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       isDense: true,
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.check_circle_outline),
-                        onPressed: () {
-                          settings.setServerUrl(_urlController.text.trim());
-                        },
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(_obscureApiKey
+                                ? Icons.visibility_off
+                                : Icons.visibility),
+                            onPressed: () {
+                              setState(() {
+                                _obscureApiKey = !_obscureApiKey;
+                              });
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.check_circle_outline),
+                            onPressed: () {
+                              settings.setApiKey(_apiKeyController.text.trim());
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                    onSubmitted: (val) => settings.setServerUrl(val.trim()),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      ActionChip(
-                        label: const Text('Emulator (10.0.2.2)'),
-                        onPressed: () {
-                          _urlController.text = 'http://10.0.2.2:11434';
-                          settings.setServerUrl('http://10.0.2.2:11434');
-                        },
-                      ),
-                      ActionChip(
-                        label: const Text('Localhost (127.0.0.1)'),
-                        onPressed: () {
-                          _urlController.text = 'http://127.0.0.1:11434';
-                          settings.setServerUrl('http://127.0.0.1:11434');
-                        },
-                      ),
-                    ],
+                    onSubmitted: (val) => settings.setApiKey(val.trim()),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -221,14 +165,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // Section 2: Model Configuration
+          // Section 2: Active Model Picker
           Card(
             elevation: 0,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
             ),
             child: Padding(
@@ -238,11 +182,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.smart_toy_rounded,
-                          color: theme.colorScheme.primary),
+                      Icon(Icons.smart_toy_rounded, color: theme.colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
-                        'Active Model',
+                        'Active AI Model',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -251,30 +194,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: settings.selectedModel,
+                    initialValue: LLMModelInfo.curatedModels
+                            .any((m) => m.id == settings.selectedModel)
+                        ? settings.selectedModel
+                        : LLMModelInfo.curatedModels.first.id,
                     decoration: InputDecoration(
-                      labelText: 'Model Selection',
+                      labelText: 'Select Model',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       isDense: true,
                     ),
-                    items: [
-                      ...LLMModelInfo.curatedModels.map((m) {
-                        return DropdownMenuItem(
-                          value: m.id,
-                          child: Text('${m.name} (${m.parameterSize})'),
-                        );
-                      }),
-                      // Add any server-discovered models not in curated list
-                      ...settings.availableServerModels
-                          .where((name) =>
-                              !LLMModelInfo.curatedModels.any((c) => c.id == name))
-                          .map((name) => DropdownMenuItem(
-                                value: name,
-                                child: Text('Local Tag: $name'),
-                              )),
-                    ],
+                    items: LLMModelInfo.curatedModels.map((m) {
+                      return DropdownMenuItem(
+                        value: m.id,
+                        child: Text('${m.name} • ${m.badge}'),
+                      );
+                    }).toList(),
                     onChanged: (val) {
                       if (val != null) {
                         settings.setSelectedModel(val);
@@ -295,14 +231,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // Section 3: Persona / System Prompt
+          // Section 3: AI Persona & Role
           Card(
             elevation: 0,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
             ),
             child: Padding(
@@ -312,8 +248,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.psychology_rounded,
-                          color: theme.colorScheme.primary),
+                      Icon(Icons.psychology_rounded, color: theme.colorScheme.primary),
                       const SizedBox(width: 8),
                       Text(
                         'AI Persona & Instructions',
@@ -329,8 +264,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: _personaPresets.entries.map((entry) {
                       return ChoiceChip(
                         label: Text(entry.key),
-                        selected:
-                            settings.systemPrompt == entry.value,
+                        selected: settings.systemPrompt == entry.value,
                         onSelected: (selected) {
                           if (selected) {
                             _systemPromptController.text = entry.value;
@@ -359,14 +293,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // Section 4: Generation Parameters
+          // Section 4: Creativity / Temperature
           Card(
             elevation: 0,
-            color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
             ),
             child: Padding(
@@ -395,46 +329,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 16),
 
-          // Section 5: Setup Guide Card
+          // Section 5: App & Privacy Info
           Card(
-            color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+            elevation: 0,
+            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
               side: BorderSide(
-                color: theme.colorScheme.primary.withOpacity(0.3),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
               ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+            child: const Padding(
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Running Qwen 2.5 Locally',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
                   Text(
-                    'To connect your physical Android phone to Ollama on your computer:\n\n'
-                    '1. Start Ollama with network binding:\n'
-                    '   set OLLAMA_HOST=0.0.0.0:11434 (Windows CMD)\n'
-                    r'   $env:OLLAMA_HOST="0.0.0.0:11434" (PowerShell)' '\n\n'
-                    '2. Run Qwen 2.5 lightweight model:\n'
-                    '   ollama run qwen2.5:0.5b\n\n'
-                    '3. In this screen, enter your computer\'s Wi-Fi IP (e.g., http://192.168.1.15:11434).',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontFamily: 'monospace',
-                      height: 1.4,
-                    ),
+                    'LocalCall AI v1.0.0',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Conversations and context are stored locally on-device in encrypted SQLite storage. Inference powered by Groq Cloud API.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 ],
               ),

@@ -1,0 +1,4 @@
+FROM "d:/Build LocalCall AI/01_local_ai_chat/models/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+SYSTEM """You are LocalCall Assistant, a helpful, polite, and intelligent AI phone assistant. Respond clearly and concisely."""

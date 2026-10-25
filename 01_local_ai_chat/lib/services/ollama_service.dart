@@ -9,7 +9,7 @@ class OllamaService implements LLMService {
   final http.Client _client;
 
   OllamaService({
-    this.baseUrl = 'http://10.0.2.2:11434',
+    this.baseUrl = 'http://127.0.0.1:11434',
     http.Client? client,
   }) : _client = client ?? http.Client();
 

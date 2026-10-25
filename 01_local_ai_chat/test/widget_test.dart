@@ -7,34 +7,34 @@ void main() {
   test('ChatMessage serialization test', () {
     final msg = ChatMessage(
       role: MessageRole.user,
-      content: 'Hello Local AI',
-      modelName: 'qwen2.5:0.5b',
+      content: 'Hello LocalCall AI',
+      modelName: 'qwen/qwen3.8-27b',
     );
 
     final json = msg.toJson();
     final reconstructed = ChatMessage.fromJson(json);
 
-    expect(reconstructed.content, 'Hello Local AI');
+    expect(reconstructed.content, 'Hello LocalCall AI');
     expect(reconstructed.role, MessageRole.user);
-    expect(reconstructed.modelName, 'qwen2.5:0.5b');
+    expect(reconstructed.modelName, 'qwen/qwen3.8-27b');
   });
 
   test('ChatSession initialization test', () {
     final session = ChatSession(
       title: 'Meeting Notes',
-      modelId: 'qwen2.5:1.5b',
+      modelId: 'qwen/qwen3.8-27b',
     );
 
     expect(session.title, 'Meeting Notes');
-    expect(session.modelId, 'qwen2.5:1.5b');
+    expect(session.modelId, 'qwen/qwen3.8-27b');
     expect(session.messages.isEmpty, true);
   });
 
-  test('LLMModelInfo curated list includes Qwen 2.5', () {
+  test('LLMModelInfo curated list includes Groq models', () {
     final defaultModel = LLMModelInfo.curatedModels.firstWhere((m) => m.isDefault);
-    expect(defaultModel.id, 'qwen2.5:0.5b');
+    expect(defaultModel.id, 'qwen/qwen3.8-27b');
 
-    final qwen15 = LLMModelInfo.findById('qwen2.5:1.5b');
-    expect(qwen15.parameterSize, '1.5 Billion');
+    final qwen = LLMModelInfo.findById('qwen/qwen3.8-27b');
+    expect(qwen.name, 'Qwen 3.8 (27B)');
   });
 }

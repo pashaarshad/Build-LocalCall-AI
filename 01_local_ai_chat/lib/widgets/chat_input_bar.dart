@@ -32,8 +32,8 @@ class _ChatInputBarState extends State<ChatInputBar> {
       'prompt': 'Here is a quick call note: "Customer John called regarding invoice #402. Paid yesterday, wants confirmation receipt before 5 PM." Please provide a structured summary with action items.',
     },
     {
-      'label': '⚡ Test Qwen 2.5 Speed',
-      'prompt': 'Explain the difference between on-device local AI and cloud-based AI in 3 concise bullet points.',
+      'label': '⚡ Test AI Speed',
+      'prompt': 'Provide 3 concise bullet points on how AI phone assistants save time and organize call notes.',
     },
   ];
 

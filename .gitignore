@@ -1,0 +1,10 @@
+*.apk
+*.aab
+*.jks
+*.keystore
+key.properties
+01_local_ai_chat/android/key.properties
+01_local_ai_chat/android/app/upload-keystore.jks
+01_local_ai_chat/build/
+01_local_ai_chat/.dart_tool/
+**/models/*.gguf

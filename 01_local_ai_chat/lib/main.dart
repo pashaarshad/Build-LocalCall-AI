@@ -4,7 +4,6 @@ import 'providers/chat_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/chat_screen.dart';
 import 'services/database_helper.dart';
-import 'services/ollama_service.dart';
 import 'services/storage_service.dart';
 
 void main() async {
@@ -13,13 +12,12 @@ void main() async {
   // Initialize storage service & SQLite database
   final storageService = await StorageService.init();
   final dbHelper = DatabaseHelper();
-  final ollamaService = OllamaService();
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_) => SettingsProvider(storageService, ollamaService),
+          create: (_) => SettingsProvider(storageService),
         ),
         ChangeNotifierProxyProvider<SettingsProvider, ChatProvider>(
           create: (ctx) => ChatProvider(
@@ -41,16 +39,16 @@ class LocalAIChatApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primarySeed = Color(0xFF1E88E5); // Modern energetic blue
+    const primaryAccent = Color(0xFF0077B6);
 
     return MaterialApp(
-      title: 'Local AI Chat',
+      title: 'LocalCall AI',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: primarySeed,
+          seedColor: primaryAccent,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
@@ -61,7 +59,7 @@ class LocalAIChatApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: primarySeed,
+          seedColor: primaryAccent,
           brightness: Brightness.dark,
         ),
         appBarTheme: const AppBarTheme(

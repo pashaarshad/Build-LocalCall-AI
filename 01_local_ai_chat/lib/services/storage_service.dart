@@ -9,6 +9,8 @@ class StorageService {
   static const String _keySelectedModel = 'selected_model';
   static const String _keySystemPrompt = 'system_prompt';
   static const String _keyTemperature = 'temperature';
+  static const String _keyApiKey = 'api_key';
+  static const String _keyInferenceMode = 'inference_mode';
 
   final SharedPreferences _prefs;
 
@@ -50,7 +52,7 @@ class StorageService {
   // --- Settings Persistence ---
 
   String getServerUrl() {
-    return _prefs.getString(_keyServerUrl) ?? 'http://10.0.2.2:11434';
+    return _prefs.getString(_keyServerUrl) ?? 'http://127.0.0.1:11434';
   }
 
   Future<void> setServerUrl(String url) async {
@@ -81,4 +83,22 @@ class StorageService {
   Future<void> setTemperature(double temp) async {
     await _prefs.setDouble(_keyTemperature, temp);
   }
+
+  String getApiKey() {
+    return _prefs.getString(_keyApiKey) ??
+        '';
+  }
+
+  Future<void> setApiKey(String key) async {
+    await _prefs.setString(_keyApiKey, key);
+  }
+
+  String getInferenceMode() {
+    return _prefs.getString(_keyInferenceMode) ?? 'groqCloud';
+  }
+
+  Future<void> setInferenceMode(String mode) async {
+    await _prefs.setString(_keyInferenceMode, mode);
+  }
 }
+

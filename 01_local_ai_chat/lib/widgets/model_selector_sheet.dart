@@ -43,7 +43,7 @@ class ModelSelectorSheet extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.memory_rounded, color: theme.colorScheme.primary),
+              Icon(Icons.smart_toy_rounded, color: theme.colorScheme.primary),
               const SizedBox(width: 10),
               Text(
                 'Select AI Model',
@@ -55,7 +55,7 @@ class ModelSelectorSheet extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Qwen 2.5 is optimized for low latency and high accuracy on Android and iOS.',
+            'Powered by Groq Cloud for instant token streaming (500+ tok/s).',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -80,29 +80,29 @@ class ModelSelectorSheet extends StatelessWidget {
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? theme.colorScheme.primaryContainer.withOpacity(0.5)
-                          : theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
+                          : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isSelected
                             ? theme.colorScheme.primary
-                            : theme.colorScheme.outlineVariant.withOpacity(0.5),
+                            : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                         width: isSelected ? 1.5 : 1,
                       ),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Radio<String>(
-                          value: model.id,
-                          groupValue: settings.selectedModel,
-                          onChanged: (val) {
-                            if (val != null) {
-                              settings.setSelectedModel(val);
-                              Navigator.pop(context);
-                            }
-                          },
+                        Icon(
+                          isSelected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.outline,
+                          size: 20,
                         ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,27 +118,29 @@ class ModelSelectorSheet extends StatelessWidget {
                                           : theme.colorScheme.onSurface,
                                     ),
                                   ),
-                                  if (model.isDefault) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.primary,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Recommended',
-                                        style: theme.textTheme.labelSmall?.copyWith(
-                                          color: theme.colorScheme.onPrimary,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      model.badge,
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: isSelected
+                                            ? theme.colorScheme.onPrimary
+                                            : theme.colorScheme.onSurface,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                  ],
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 4),
@@ -148,22 +150,6 @@ class ModelSelectorSheet extends StatelessWidget {
                                   color: theme.colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  _infoChip(
-                                    context,
-                                    Icons.tune,
-                                    model.parameterSize,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  _infoChip(
-                                    context,
-                                    Icons.developer_board,
-                                    model.minRam,
-                                  ),
-                                ],
-                              ),
                             ],
                           ),
                         ),
@@ -172,34 +158,6 @@ class ModelSelectorSheet extends StatelessWidget {
                   ),
                 );
               },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _infoChip(BuildContext context, IconData icon, String text) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: theme.colorScheme.outline),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontSize: 10,
-              color: theme.colorScheme.outline,
             ),
           ),
         ],

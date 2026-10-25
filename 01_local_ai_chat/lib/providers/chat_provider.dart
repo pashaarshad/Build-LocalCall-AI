@@ -19,6 +19,8 @@ class ChatProvider with ChangeNotifier {
 
   ChatProvider(this._storage, this._settingsProvider, [DatabaseHelper? dbHelper])
       : _dbHelper = dbHelper ?? DatabaseHelper() {
+    _currentSession = _createNewSessionInstance();
+    _sessions = [_currentSession];
     _initDatabaseAndSessions();
   }
 

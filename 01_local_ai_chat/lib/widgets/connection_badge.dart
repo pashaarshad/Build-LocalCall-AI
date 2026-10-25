@@ -34,7 +34,7 @@ class ConnectionBadge extends StatelessWidget {
     }
 
     return Tooltip(
-      message: '${settings.statusMessage}\nHost: ${settings.serverUrl}',
+      message: '${settings.statusMessage}\nModel: ${settings.selectedModel}',
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => settings.testConnection(),

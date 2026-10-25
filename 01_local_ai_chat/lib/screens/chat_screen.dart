@@ -207,15 +207,14 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Local AI Calling Brain',
+            'LocalCall AI Assistant',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Powered by Qwen 2.5 on-device and local intelligence. '
-            'This chatbot forms the conversational core for Phase 4 & 5 auto-call assistant.',
+            'Ultra-fast conversations, call notes & structured summaries powered by Qwen 3.8 & Allam 2.',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -226,17 +225,17 @@ class _ChatScreenState extends State<ChatScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: theme.colorScheme.outlineVariant.withOpacity(0.5),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.offline_bolt_rounded,
+                  Icons.bolt_rounded,
                   size: 18,
                   color: theme.colorScheme.primary,
                 ),
