@@ -1,57 +1,51 @@
-# Privacy Policy for LocalCall AI
+# Privacy Policy for LocalCall AI & Text to Voice AI Audio
 
-**Effective Date:** October 25, 2026  
-**Last Updated:** October 25, 2026
+**Effective Date:** October 31, 2026  
+**Last Updated:** October 31, 2026
 
-LocalCall AI ("we", "our", or "the app") is committed to protecting your privacy. This Privacy Policy explains how our application handles information when you use LocalCall AI.
+LocalCall AI and Text to Voice AI Audio ("we", "our", or "the app") are committed to protecting your privacy. This Privacy Policy explains how our applications handle your information.
 
 ---
 
 ### 1. Information Collection and Storage
 
-- **On-Device Storage:** All chat sessions, conversation histories, and user settings (such as theme preferences and custom system prompts) are stored exclusively on your device using a local SQLite database and shared preferences.
-- **No Account Required:** You are not required to create an account, log in, or provide any personal identification (such as name, email, or phone number) to use the application.
-- **No Analytics or Tracking:** LocalCall AI does not embed third-party tracking SDKs, advertising frameworks, or user behavioral telemetry.
+- **100% On-Device Processing:** All text-to-speech voice conversions, audio recordings, chat sessions, and user settings (pitch, speed, volume, theme preferences) are processed and stored exclusively on your device.
+- **No Account Required:** You are not required to create an account, register, or provide any personal identification (such as name, email address, or phone number) to use the application.
+- **No Analytics or Tracking:** We do not embed third-party tracking SDKs, advertising frameworks, advertising IDs, or behavioral analytics tools.
+- **Audio File Downloads:** When you choose to download or export an audio file, it is saved directly to your device's local storage (such as your Downloads folder). We never upload or store your audio files on external servers.
 
 ---
 
-### 2. Cloud API Processing
+### 2. Permissions and Device Access
 
-- When you send a prompt or message in LocalCall AI, the text is transmitted securely over HTTPS directly to the inference API provider (**Groq Cloud API**) using the configured API key to generate a response.
-- Your prompts are processed strictly for the ephemeral generation of responses.
-- We do not run intermediary intermediary tracking servers or intercept your prompts.
-
----
-
-### 3. API Key Security
-
-- Your API Key is stored securely within your device's private application storage sandboxed by the Android OS.
-- Your key is never transmitted to us or any entity other than the official API endpoint (`api.groq.com`).
+- **Storage / Audio Access:** The app accesses local device storage solely to save and retrieve your generated audio files (.mp3 / .wav) at your explicit request.
+- **Microphone / Network:** The app does not require sensitive permissions such as location, contacts, or camera. Network access, where applicable, is used solely for standard updates.
 
 ---
 
-### 4. Data Deletion & User Control
+### 3. Data Deletion & User Control
 
-You maintain full control over your data at all times:
-- You can delete any individual chat session or clear all conversation history directly from the **History** screen.
-- Uninstalling the application immediately and permanently removes all stored chats, settings, and database files from your device.
-
----
-
-### 5. Children's Privacy
-
-LocalCall AI is not directed at children under the age of 13. We do not knowingly collect personal identifiable information from children.
+You maintain complete ownership and control over your data at all times:
+- You can delete any individual audio generation or conversation directly from the app history.
+- You can clear all saved audio recordings from the settings screen.
+- Uninstalling the application immediately and permanently removes all stored data, preferences, and sandboxed files from your device.
 
 ---
 
-### 6. Changes to this Privacy Policy
+### 4. Children's Privacy
 
-We may update this Privacy Policy from time to time. Any changes will be posted within the application and in the Google Play Store listing.
+Our applications are not directed to children under the age of 13. We do not knowingly collect any personally identifiable information from children.
 
 ---
 
-### 7. Contact Us
+### 5. Changes to this Privacy Policy
+
+We may update this Privacy Policy from time to time. Any updates will be reflected on this page and linked within the application's store listing.
+
+---
+
+### 6. Contact Us
 
 If you have any questions or feedback regarding this Privacy Policy, please contact:
 - **Developer / Support:** LocalCall AI Team
-- **Email:** support@localcallai.com (or your designated developer contact email)
+- **Email:** approgrammingtech@gmail.com
