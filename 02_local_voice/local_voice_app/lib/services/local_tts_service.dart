@@ -9,7 +9,6 @@ import 'universal_tts_service.dart';
 class LocalTtsService {
   final FlutterTts _tts = FlutterTts();
   bool _isInitialized = false;
-  List<VoiceModel> _cachedDeviceVoices = [];
 
   FlutterTts get tts => _tts;
 
@@ -33,118 +32,6 @@ class LocalTtsService {
     }
   }
 
-  Future<List<VoiceModel>> getDeviceVoices() async {
-    await init();
-    if (_cachedDeviceVoices.isNotEmpty) return _cachedDeviceVoices;
-
-    try {
-      final rawVoices = await _tts.getVoices;
-      if (rawVoices is List && rawVoices.isNotEmpty) {
-        final List<VoiceModel> list = [];
-        for (final item in rawVoices) {
-          if (item is Map) {
-            final name = (item['name'] ?? item['voiceURI'] ?? '').toString();
-            final locale = (item['locale'] ?? item['lang'] ?? '').toString();
-            final isIndian = locale.contains('IN') ||
-                locale.contains('hi') ||
-                locale.contains('ta') ||
-                locale.contains('te') ||
-                locale.contains('kn') ||
-                locale.contains('mr') ||
-                locale.contains('gu') ||
-                locale.contains('bn');
-
-            final gender = name.toLowerCase().contains('female') ||
-                    name.toLowerCase().contains('woman') ||
-                    name.toLowerCase().contains('#female')
-                ? 'Female'
-                : 'Male';
-
-            list.add(
-              VoiceModel(
-                shortName: name,
-                friendlyName: '$name ($locale)',
-                locale: locale,
-                gender: gender,
-                isIndian: isIndian,
-                tier: isIndian ? 'indian' : 'standard',
-                tag: 'Device On-Board TTS',
-                description: '100% Offline Local Device Engine',
-                langDisplay: locale,
-              ),
-            );
-          }
-        }
-
-        if (list.isNotEmpty) {
-          _cachedDeviceVoices = list;
-          return list;
-        }
-      }
-    } catch (e) {
-      debugPrint('Failed to query device voices: $e');
-    }
-
-    _cachedDeviceVoices = [
-      const VoiceModel(
-        shortName: 'hi-IN-Local',
-        friendlyName: 'Hindi (Swara - India)',
-        locale: 'hi-IN',
-        gender: 'Female',
-        isIndian: true,
-        tier: 'recommended',
-        tag: 'Recommended (Ultra-Human)',
-        description: 'Natural Hindi voice for conversation & announcements',
-        langDisplay: 'Hindi (India)',
-      ),
-      const VoiceModel(
-        shortName: 'en-IN-Local',
-        friendlyName: 'Indian English (Neerja)',
-        locale: 'en-IN',
-        gender: 'Female',
-        isIndian: true,
-        tier: 'recommended',
-        tag: 'Recommended (Expressive)',
-        description: 'Articulate, conversational Indian English voice',
-        langDisplay: 'English (India)',
-      ),
-      const VoiceModel(
-        shortName: 'en-IN-Prabhat',
-        friendlyName: 'Indian English (Prabhat)',
-        locale: 'en-IN',
-        gender: 'Male',
-        isIndian: true,
-        tier: 'recommended',
-        tag: 'Recommended',
-        description: 'Confident corporate male Indian English',
-        langDisplay: 'English (India)',
-      ),
-      const VoiceModel(
-        shortName: 'ta-IN-Local',
-        friendlyName: 'Tamil (Pallavi)',
-        locale: 'ta-IN',
-        gender: 'Female',
-        isIndian: true,
-        tier: 'recommended',
-        tag: 'Recommended',
-        description: 'Fluent natural Tamil speaker',
-        langDisplay: 'Tamil (India)',
-      ),
-      const VoiceModel(
-        shortName: 'te-IN-Local',
-        friendlyName: 'Telugu (Shruti)',
-        locale: 'te-IN',
-        gender: 'Female',
-        isIndian: true,
-        tier: 'recommended',
-        tag: 'Recommended',
-        description: 'Expressive female Telugu voice',
-        langDisplay: 'Telugu (India)',
-      ),
-    ];
-    return _cachedDeviceVoices;
-  }
-
   Future<void> speakDirectly({
     required String text,
     VoiceModel? voice,
@@ -155,7 +42,7 @@ class LocalTtsService {
     await init();
     await _tts.stop();
 
-    // Correctly map language code so Hindi, Tamil, Telugu pronounce accurately
+    final isMale = voice != null && !voice.isFemale;
     final langCode = UniversalTtsService.detectLanguageCode(
       text,
       voice ??
@@ -172,11 +59,14 @@ class LocalTtsService {
           ),
     );
 
-    // Map rate (-50 to 100) to FlutterTts (0.2 to 1.0, default 0.5)
+    // Speed calculation
     final double flutterRate = (0.5 + (rate / 200.0)).clamp(0.1, 1.0);
-    // Map pitch (-50 to 50) to FlutterTts (0.5 to 1.5, default 1.0)
-    final double flutterPitch = (1.0 + (pitch / 100.0)).clamp(0.5, 2.0);
-    // Map volume (-50 to 50) to FlutterTts (0.0 to 1.0, default 1.0)
+
+    // Pitch modulation: Male voices use deeper, lower resonant pitch (0.75-0.82), Female use natural pitch (1.0-1.1)
+    double basePitch = isMale ? 0.78 : 1.05;
+    final double flutterPitch = (basePitch + (pitch / 100.0)).clamp(0.5, 2.0);
+
+    // Volume calculation
     final double flutterVolume = (1.0 + (volume / 100.0)).clamp(0.1, 1.0);
 
     await _tts.setSpeechRate(flutterRate);
@@ -200,6 +90,8 @@ class LocalTtsService {
         await _tts.setLanguage('ml-IN');
       } else if (langCode == 'mr') {
         await _tts.setLanguage('mr-IN');
+      } else if (langCode == 'ur') {
+        await _tts.setLanguage('ur-IN');
       } else {
         await _tts.setLanguage(voice?.locale.isNotEmpty == true ? voice!.locale : 'en-IN');
       }
@@ -227,8 +119,10 @@ class LocalTtsService {
     final audioId = DateTime.now().millisecondsSinceEpoch.toString();
     final fileName = 'LocalVoice_$audioId.wav';
 
+    final isMale = !voice.isFemale;
     final double flutterRate = (0.5 + (rate / 200.0)).clamp(0.1, 1.0);
-    final double flutterPitch = (1.0 + (pitch / 100.0)).clamp(0.5, 2.0);
+    final double basePitch = isMale ? 0.78 : 1.05;
+    final double flutterPitch = (basePitch + (pitch / 100.0)).clamp(0.5, 2.0);
     final double flutterVolume = (1.0 + (volume / 100.0)).clamp(0.1, 1.0);
 
     await _tts.setSpeechRate(flutterRate);
@@ -239,6 +133,14 @@ class LocalTtsService {
     try {
       if (langCode == 'hi') {
         await _tts.setLanguage('hi-IN');
+      } else if (langCode == 'ta') {
+        await _tts.setLanguage('ta-IN');
+      } else if (langCode == 'te') {
+        await _tts.setLanguage('te-IN');
+      } else if (langCode == 'bn') {
+        await _tts.setLanguage('bn-IN');
+      } else if (langCode == 'kn') {
+        await _tts.setLanguage('kn-IN');
       } else {
         await _tts.setLanguage(voice.locale.isNotEmpty ? voice.locale : 'en-IN');
       }
@@ -262,9 +164,9 @@ class LocalTtsService {
       voiceFriendlyName: voice.friendlyName,
       langDisplay: voice.langDisplay,
       timestamp: DateTime.now(),
-      fileSize: 1024 * 35,
-      audioUrl: filePath,
-      downloadUrl: filePath,
+      fileSize: 1024 * 48,
+      audioUrl: filePath.isNotEmpty ? filePath : voice.sampleAssetPath,
+      downloadUrl: filePath.isNotEmpty ? filePath : voice.sampleAssetPath,
       rate: rate,
       pitch: pitch,
       volume: volume,

@@ -388,14 +388,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                         if (isPlaying) {
                           // Pause mid-speech
                           playerProv.pause();
-                          voiceProv.pauseSpeaking();
                         } else {
-                          // Resume or Play
-                          if (audio.audioUrl.isNotEmpty) {
-                            playerProv.play(audio.audioUrl);
-                          } else {
-                            voiceProv.speakAgain(audio);
-                          }
+                          // Resume or Play cleanly
+                          playerProv.play(audio.audioUrl);
                         }
                       },
                     ),

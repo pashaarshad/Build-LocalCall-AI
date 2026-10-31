@@ -48,6 +48,34 @@ class AudioPlayerProvider with ChangeNotifier {
     });
   }
 
+  Future<void> playAsset(String assetPath) async {
+    try {
+      if (_currentAudioUrl == assetPath && _playerState == PlayerState.playing) {
+        await pause();
+        return;
+      }
+      if (_currentAudioUrl == assetPath && _playerState == PlayerState.paused) {
+        await resume();
+        return;
+      }
+
+      _isLoading = true;
+      _currentAudioUrl = assetPath;
+      notifyListeners();
+
+      await _player.stop();
+      await _player.setPlaybackRate(_playbackSpeed);
+
+      final cleanPath = assetPath.startsWith('assets/') ? assetPath.substring(7) : assetPath;
+      await _player.play(AssetSource(cleanPath));
+    } catch (e) {
+      debugPrint('Error playing asset audio: $e');
+      _isLoading = false;
+      _playerState = PlayerState.stopped;
+      notifyListeners();
+    }
+  }
+
   Future<void> play(String url) async {
     try {
       if (_currentAudioUrl == url && _playerState == PlayerState.paused) {
@@ -62,7 +90,10 @@ class AudioPlayerProvider with ChangeNotifier {
       await _player.stop();
       await _player.setPlaybackRate(_playbackSpeed);
 
-      if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (url.startsWith('assets/')) {
+        final cleanPath = url.substring(7);
+        await _player.play(AssetSource(cleanPath));
+      } else if (url.startsWith('http://') || url.startsWith('https://')) {
         await _player.play(UrlSource(url));
       } else {
         await _player.play(DeviceFileSource(url));

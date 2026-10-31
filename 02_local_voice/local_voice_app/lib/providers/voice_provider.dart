@@ -5,7 +5,6 @@ import '../models/voice_model.dart';
 import '../models/audio_generation.dart';
 import '../services/api_service.dart';
 import '../services/local_tts_service.dart';
-import '../services/universal_tts_service.dart';
 
 class VoiceProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -21,22 +20,20 @@ class VoiceProvider with ChangeNotifier {
   int _volume = 0;     // -50% to +50%
 
   // Filter and search
-  String _activeCategory = 'recommended'; // 'recommended', 'indian', 'all', 'female', 'male'
+  String _activeCategory = 'recommended'; // 'recommended', 'indian', 'female', 'male', 'all'
   String _searchQuery = '';
 
   // UI state
   bool _isGenerating = false;
-  bool _isLoadingVoices = false;
-  bool _isSpeakingLocal = false;
   String? _errorMessage;
 
   AudioGeneration? _currentAudio;
   List<AudioGeneration> _history = [];
 
-  static const String _prefKeyHistory = 'voice_studio_history_v1';
-  static const String _prefKeyVoice = 'voice_studio_selected_voice_v1';
-  static const String _prefKeyRate = 'voice_studio_rate_v1';
-  static const String _prefKeyPitch = 'voice_studio_pitch_v1';
+  static const String _prefKeyHistory = 'voice_studio_history_v2';
+  static const String _prefKeyVoice = 'voice_studio_selected_voice_v2';
+  static const String _prefKeyRate = 'voice_studio_rate_v2';
+  static const String _prefKeyPitch = 'voice_studio_pitch_v2';
 
   VoiceProvider(this._prefs) {
     _loadSettings();
@@ -52,8 +49,6 @@ class VoiceProvider with ChangeNotifier {
   String get activeCategory => _activeCategory;
   String get searchQuery => _searchQuery;
   bool get isGenerating => _isGenerating;
-  bool get isLoadingVoices => _isLoadingVoices;
-  bool get isSpeakingLocal => _isSpeakingLocal;
   String? get errorMessage => _errorMessage;
   AudioGeneration? get currentAudio => _currentAudio;
   List<AudioGeneration> get history => _history;
@@ -104,18 +99,9 @@ class VoiceProvider with ChangeNotifier {
   }
 
   Future<void> initVoices() async {
-    _isLoadingVoices = true;
     _allVoices = ApiService.defaultFallbackVoices();
-    notifyListeners();
 
     await _localTts.init();
-
-    try {
-      final remoteVoices = await _apiService.fetchVoices();
-      if (remoteVoices.isNotEmpty) {
-        _allVoices = remoteVoices;
-      }
-    } catch (_) {}
 
     final savedVoiceName = _prefs.getString(_prefKeyVoice);
     if (savedVoiceName != null) {
@@ -128,7 +114,6 @@ class VoiceProvider with ChangeNotifier {
       _selectedVoice = _allVoices.first;
     }
 
-    _isLoadingVoices = false;
     notifyListeners();
   }
 
@@ -187,7 +172,7 @@ class VoiceProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Automatic language detection & voice matching for Indian & Global languages
+      // Automatic language script detection
       VoiceModel voiceToUse = _selectedVoice;
       final hasHindi = RegExp(r'[\u0900-\u097F]').hasMatch(cleanText);
       final hasTamil = RegExp(r'[\u0B80-\u0BFF]').hasMatch(cleanText);
@@ -198,82 +183,58 @@ class VoiceProvider with ChangeNotifier {
       final hasMalayalam = RegExp(r'[\u0D00-\u0D7F]').hasMatch(cleanText);
       final hasUrdu = RegExp(r'[\u0600-\u06FF]').hasMatch(cleanText);
 
+      final isSelectedMale = !voiceToUse.isFemale;
+
       if (hasHindi && !voiceToUse.locale.startsWith('hi')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'hi-IN-SwaraNeural' || v.locale.startsWith('hi'),
+          (v) => isSelectedMale ? v.shortName.contains('Madhur') : v.shortName.contains('Swara'),
           orElse: () => _selectedVoice,
         );
       } else if (hasTamil && !voiceToUse.locale.startsWith('ta')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'ta-IN-PallaviNeural' || v.locale.startsWith('ta'),
+          (v) => isSelectedMale ? v.shortName.contains('Valluvar') : v.shortName.contains('Pallavi'),
           orElse: () => _selectedVoice,
         );
       } else if (hasTelugu && !voiceToUse.locale.startsWith('te')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'te-IN-ShrutiNeural' || v.locale.startsWith('te'),
+          (v) => isSelectedMale ? v.shortName.contains('Mohan') : v.shortName.contains('Shruti'),
           orElse: () => _selectedVoice,
         );
       } else if (hasBengali && !voiceToUse.locale.startsWith('bn')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'bn-IN-TanishaaNeural' || v.locale.startsWith('bn'),
+          (v) => isSelectedMale ? v.shortName.contains('Bashkar') : v.shortName.contains('Tanishaa'),
           orElse: () => _selectedVoice,
         );
       } else if (hasGujarati && !voiceToUse.locale.startsWith('gu')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'gu-IN-DhwaniNeural' || v.locale.startsWith('gu'),
+          (v) => v.shortName.contains('Dhwani'),
           orElse: () => _selectedVoice,
         );
       } else if (hasKannada && !voiceToUse.locale.startsWith('kn')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'kn-IN-SapnaNeural' || v.locale.startsWith('kn'),
+          (v) => isSelectedMale ? v.shortName.contains('Gagan') : v.shortName.contains('Sapna'),
           orElse: () => _selectedVoice,
         );
       } else if (hasMalayalam && !voiceToUse.locale.startsWith('ml')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'ml-IN-SobhanaNeural' || v.locale.startsWith('ml'),
+          (v) => v.shortName.contains('Sobhana'),
           orElse: () => _selectedVoice,
         );
       } else if (hasUrdu && !voiceToUse.locale.startsWith('ur')) {
         voiceToUse = _allVoices.firstWhere(
-          (v) => v.shortName == 'ur-IN-GulNeural' || v.locale.startsWith('ur'),
+          (v) => v.shortName.contains('Gul'),
           orElse: () => _selectedVoice,
         );
       }
 
-      AudioGeneration? gen;
-
-      // 1. Primary: High-fidelity Neural Synthesis via local engine
-      try {
-        gen = await _apiService.synthesize(
-          text: cleanText,
-          voice: voiceToUse,
-          rate: _rate,
-          pitch: _pitch,
-          volume: _volume,
-        );
-      } catch (primaryErr) {
-        debugPrint('Primary local synthesizer exception: $primaryErr. Using fallback...');
-        // 2. Fallback: Universal direct stream synthesis
-        try {
-          gen = await UniversalTtsService.synthesizeUniversal(
-            text: cleanText,
-            voice: voiceToUse,
-            rate: _rate,
-            pitch: _pitch,
-            volume: _volume,
-          );
-        } catch (fbErr) {
-          debugPrint('Fallback synthesis exception: $fbErr');
-          // 3. Fallback: Native device TTS
-          gen = await _localTts.synthesizeLocalFile(
-            text: cleanText,
-            voice: voiceToUse,
-            rate: _rate,
-            pitch: _pitch,
-            volume: _volume,
-          );
-        }
-      }
+      // Generate local on-device audio file
+      final gen = await _localTts.synthesizeLocalFile(
+        text: cleanText,
+        voice: voiceToUse,
+        rate: _rate,
+        pitch: _pitch,
+        volume: _volume,
+      );
 
       _currentAudio = gen;
       _history.insert(0, gen);
@@ -294,28 +255,10 @@ class VoiceProvider with ChangeNotifier {
 
   Future<void> pauseSpeaking() async {
     await _localTts.pause();
-    _isSpeakingLocal = false;
-    notifyListeners();
   }
 
   Future<void> stopSpeaking() async {
     await _localTts.stop();
-    _isSpeakingLocal = false;
-    notifyListeners();
-  }
-
-  Future<void> speakAgain(AudioGeneration audio) async {
-    _isSpeakingLocal = true;
-    notifyListeners();
-    await _localTts.speakDirectly(
-      text: audio.text,
-      voice: _selectedVoice,
-      rate: audio.rate,
-      pitch: audio.pitch,
-      volume: audio.volume,
-    );
-    _isSpeakingLocal = false;
-    notifyListeners();
   }
 
   Future<String?> downloadAudio(AudioGeneration audio) async {
