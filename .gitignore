@@ -3,8 +3,16 @@
 *.jks
 *.keystore
 key.properties
-01_local_ai_chat/android/key.properties
-01_local_ai_chat/android/app/upload-keystore.jks
+**/key.properties
+**/upload-keystore.jks
+
+# Build artifacts
 01_local_ai_chat/build/
 01_local_ai_chat/.dart_tool/
+02_local_voice/local_voice_app/build/
+02_local_voice/local_voice_app/.dart_tool/
+02_local_voice/backend/audio_cache/
+02_local_voice/backend/__pycache__/
+**/__pycache__/
+
 **/models/*.gguf
