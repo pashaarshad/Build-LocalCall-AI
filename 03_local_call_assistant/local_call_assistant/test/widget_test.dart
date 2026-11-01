@@ -1,0 +1,46 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:local_call_assistant/models/call_session.dart';
+
+void main() {
+  test('CallSession creation, duration, and serialization', () {
+    final now = DateTime.now();
+    final session = CallSession(
+      id: 'test_123',
+      callerName: 'Vijay Kumar',
+      callerNumber: '+91 98450 12345',
+      startTime: now.subtract(const Duration(seconds: 75)),
+      endTime: now,
+      status: CallStatus.ended,
+      urgency: UrgencyLevel.high,
+      language: 'kn_IN',
+    );
+
+    session.turns.add(
+      CallTurn(
+        speaker: 'assistant',
+        text: 'ನಮಸ್ಕಾರ, ನಾನು ಅರ್ಷದ್ ಅವರ AI ಅಸಿಸ್ಟೆಂಟ್.',
+        timestamp: now.subtract(const Duration(seconds: 70)),
+      ),
+    );
+
+    session.turns.add(
+      CallTurn(
+        speaker: 'caller',
+        text: 'ನನಗೆ ಅರ್ಷದ್ ಅವರ ಹತ್ತಿರ ಅರ್ಜೆಂಟ್ ಕೆಲಸವಿದೆ.',
+        timestamp: now.subtract(const Duration(seconds: 60)),
+      ),
+    );
+
+    expect(session.durationSeconds, greaterThanOrEqualTo(74));
+    expect(session.formattedDuration, '01:15');
+    expect(session.turns.length, 2);
+
+    final map = session.toMap();
+    final restored = CallSession.fromMap(map);
+
+    expect(restored.callerName, 'Vijay Kumar');
+    expect(restored.turns.length, 2);
+    expect(restored.urgency, UrgencyLevel.high);
+    expect(restored.language, 'kn_IN');
+  });
+}
