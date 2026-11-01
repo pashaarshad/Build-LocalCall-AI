@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/voice_provider.dart';
 import 'providers/audio_player_provider.dart';
+import 'providers/stt_provider.dart';
 import 'screens/home_screen.dart';
 
 void main() async {
@@ -14,6 +15,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => VoiceProvider(prefs)),
         ChangeNotifierProvider(create: (_) => AudioPlayerProvider()),
+        ChangeNotifierProvider(create: (_) => SttProvider()),
       ],
       child: const LocalVoiceApp(),
     ),

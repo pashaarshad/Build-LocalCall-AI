@@ -6,11 +6,17 @@ import '../providers/audio_player_provider.dart';
 import '../widgets/audio_player_card.dart';
 import '../widgets/voice_tuning_sheet.dart';
 import 'history_screen.dart';
+import 'transcribe_screen.dart';
 
 class VoiceStudioScreen extends StatefulWidget {
   final VoiceModel voice;
+  final String? initialText;
 
-  const VoiceStudioScreen({super.key, required this.voice});
+  const VoiceStudioScreen({
+    super.key,
+    required this.voice,
+    this.initialText,
+  });
 
   @override
   State<VoiceStudioScreen> createState() => _VoiceStudioScreenState();
@@ -22,7 +28,9 @@ class _VoiceStudioScreenState extends State<VoiceStudioScreen> {
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: widget.voice.sampleTranscript);
+    _textController = TextEditingController(
+      text: widget.initialText ?? widget.voice.sampleTranscript,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<VoiceProvider>().selectVoice(widget.voice);
     });
@@ -301,14 +309,52 @@ class _VoiceStudioScreenState extends State<VoiceStudioScreen> {
                   letterSpacing: 0.3,
                 ),
               ),
-              if (_textController.text.isNotEmpty)
-                InkWell(
-                  onTap: () => setState(() => _textController.clear()),
-                  child: const Text(
-                    'Clear',
-                    style: TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600),
+              Row(
+                children: [
+                  // Quick Mic Dictate button
+                  InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TranscribeScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF6366F1), width: 0.8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.mic_rounded, size: 14, color: Color(0xFF22D3EE)),
+                          SizedBox(width: 4),
+                          Text(
+                            'Dictate with Mic',
+                            style: TextStyle(
+                              color: Color(0xFF22D3EE),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                  if (_textController.text.isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    InkWell(
+                      onTap: () => setState(() => _textController.clear()),
+                      child: const Text(
+                        'Clear',
+                        style: TextStyle(color: Color(0xFFEF4444), fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 12),

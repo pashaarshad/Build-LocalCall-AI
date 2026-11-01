@@ -7,6 +7,7 @@ import '../widgets/voice_tuning_sheet.dart';
 import '../widgets/server_config_dialog.dart';
 import 'history_screen.dart';
 import 'voice_studio_screen.dart';
+import 'transcribe_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -73,6 +74,51 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // Audio to Text (Instant Speech Dictation) button
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: InkWell(
+              onTap: () {
+                playerProv.stop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TranscribeScreen()),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF6366F1), Color(0xFF06B6D4)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.mic_rounded, color: Colors.white, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      'Audio to Text',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // Voice tuning modal
           IconButton(
             tooltip: 'Voice Tuning (Pitch & Speed)',
@@ -117,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
         slivers: [
           // Hero Showcase Banner
           SliverToBoxAdapter(
-            child: _buildShowcaseHeader(context),
+            child: _buildShowcaseHeader(context, playerProv),
           ),
 
           // Category Filter Tabs
@@ -189,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildShowcaseHeader(BuildContext context) {
+  Widget _buildShowcaseHeader(BuildContext context, AudioPlayerProvider playerProv) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       padding: const EdgeInsets.all(20),
@@ -225,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(Icons.mic_external_on_rounded, size: 14, color: Color(0xFF22D3EE)),
                 SizedBox(width: 6),
                 Text(
-                  '100% LOCAL AI VOICE STUDIO',
+                  '100% LOCAL AI VOICE & AUDIO',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -250,6 +296,89 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text(
             'Tap ▶ to hear the built-in sample audio. Tap the arrow ➔ to enter the studio and generate your own voiceovers.',
             style: TextStyle(fontSize: 13, color: Color(0xFF94A3B8), height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          // Instant Audio to Text Card / Banner
+          InkWell(
+            onTap: () {
+              playerProv.stop();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TranscribeScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF131B2E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.5)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF06B6D4)],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF06B6D4).withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.mic_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Instant Audio to Text',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              '⚡ Fast',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF22D3EE),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Speak Kannada, English, Hindi • Millisecond recognition',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF22D3EE)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
