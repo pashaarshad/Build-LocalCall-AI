@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_call_assistant/models/call_session.dart';
+import 'package:local_call_assistant/services/llm_call_agent_service.dart';
 
 void main() {
   test('CallSession creation, duration, and serialization', () {
@@ -42,5 +43,36 @@ void main() {
     expect(restored.turns.length, 2);
     expect(restored.urgency, UrgencyLevel.high);
     expect(restored.language, 'kn_IN');
+  });
+
+  test('LlmCallAgentService extracts caller name from speech', () {
+    final service = LlmCallAgentService();
+
+    expect(service.extractCallerName('Hello, my name is Rahul Sharma'), 'Rahul Sharma');
+    expect(service.extractCallerName('I am John and I want to speak with Arshad'), 'John');
+    expect(service.extractCallerName('ನಾನು ರಮೇಶ್ ಇಲ್ಲಿ'), 'ರಮೇಶ್');
+  });
+
+  test('LlmCallAgentService generates contextual reply acknowledging caller name', () async {
+    final service = LlmCallAgentService();
+    service.ownerName = 'Arshad';
+
+    final history = [
+      CallTurn(
+        speaker: 'assistant',
+        text: 'Hello! You have reached Arshad\'s AI Assistant. May I ask who is calling?',
+        timestamp: DateTime.now(),
+      ),
+    ];
+
+    final reply = await service.generateCallReply(
+      history: history,
+      lastCallerText: 'Hello, this is Vijay. I need to talk to Arshad.',
+      callerName: 'Vijay',
+      language: 'en_IN',
+    );
+
+    expect(reply.toLowerCase(), contains('vijay'));
+    expect(reply.toLowerCase(), contains('arshad'));
   });
 }

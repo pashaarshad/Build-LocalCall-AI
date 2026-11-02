@@ -49,4 +49,36 @@ class TelephonyNativeService {
       debugPrint('Error setting ring threshold native: $e');
     }
   }
+
+  Future<Map<String, bool>> checkPermissions() async {
+    try {
+      final res = await _channel.invokeMethod<Map<dynamic, dynamic>>('checkPermissions');
+      if (res != null) {
+        return res.map((k, v) => MapEntry(k.toString(), v == true));
+      }
+    } catch (e) {
+      debugPrint('Error checking permissions: $e');
+    }
+    return {'allGranted': false};
+  }
+
+  Future<Map<String, bool>> requestPermissions() async {
+    try {
+      final res = await _channel.invokeMethod<Map<dynamic, dynamic>>('requestPermissions');
+      if (res != null) {
+        return res.map((k, v) => MapEntry(k.toString(), v == true));
+      }
+    } catch (e) {
+      debugPrint('Error requesting permissions: $e');
+    }
+    return {'allGranted': false};
+  }
+
+  Future<void> openAppSettings() async {
+    try {
+      await _channel.invokeMethod('openAppSettings');
+    } catch (e) {
+      debugPrint('Error opening app settings: $e');
+    }
+  }
 }

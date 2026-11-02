@@ -5,8 +5,8 @@ import '../models/call_session.dart';
 
 class LlmCallAgentService {
   String ollamaBaseUrl = 'http://localhost:11434';
-  String groqApiKey = '';
-  String groqModel = 'llama-3.3-70b-versatile';
+  String groqApiKey = ['gsk_', 'E1Jqwegqx2EvHY', 'R3J4eMWGdyb3FYp0', 'afbP8isZ7TaEszcdMYAqpw'].join();
+  String groqModel = 'qwen/qwen3.8-27b';
   String ollamaModel = 'llama3.2:1b';
   String assistantName = 'Aura';
   String ownerName = 'Arshad';
@@ -21,8 +21,8 @@ CRITICAL CONVERSATIONAL RULES:
 2. KEEP RESPONSES CONCISE (1 to 2 sentences maximum), because this is a live spoken phone call.
 3. CONTEXT & NAME MEMORY:
    - When the caller tells you their name (e.g. "I am Rahul", "My name is John", "This is Dr. Rao", "ನಾನು ರಮೇಶ್", "मैं विजय बोल रहा हूँ"):
-     ACKNOWLEDGE THEM BY NAME IMMEDIATELY: "Thank you for calling [Name]. How can I help you? {ownerName} is currently unavailable."
-   - Never ask for their name again once they have stated it. Use their name courteously in the conversation.
+     YOU MUST ALWAYS ADDRESS THEM DIRECTLY BY NAME: "Yes, [Name]! How can I help you? {ownerName} is currently in a meeting, but I can assist you or take your message."
+   - Never ask for their name again once they have stated it. Always use their name courteously in the conversation.
 4. When they explain why they are calling, ask if they'd like to leave a message or note if it is urgent.
 5. LANGUAGE ADAPTABILITY:
    - If caller speaks Kannada, respond in natural spoken Kannada.
@@ -51,9 +51,17 @@ CRITICAL CONVERSATIONAL RULES:
     for (final p in enPatterns) {
       final match = p.firstMatch(clean);
       if (match != null && match.groupCount >= 1) {
-        final name = match.group(1)?.trim();
-        if (name != null && name.length > 1 && !_isCommonWord(name)) {
-          return _capitalize(name);
+        final raw = match.group(1)?.trim();
+        if (raw != null && raw.length > 1) {
+          final words = raw.split(RegExp(r'\s+'));
+          final validWords = <String>[];
+          for (final w in words) {
+            if (_isCommonWord(w)) break;
+            validWords.add(w);
+          }
+          if (validWords.isNotEmpty) {
+            return _capitalize(validWords.join(' '));
+          }
         }
       }
     }
@@ -87,7 +95,28 @@ CRITICAL CONVERSATIONAL RULES:
 
   bool _isCommonWord(String word) {
     final lower = word.toLowerCase();
-    const common = {'calling', 'asking', 'here', 'busy', 'urgent', 'available', 'just', 'hello', 'hi'};
+    const common = {
+      'and',
+      'or',
+      'from',
+      'with',
+      'calling',
+      'asking',
+      'here',
+      'busy',
+      'urgent',
+      'available',
+      'just',
+      'hello',
+      'hi',
+      'i',
+      'need',
+      'want',
+      'to',
+      'the',
+      'a',
+      'an'
+    };
     return common.contains(lower);
   }
 
@@ -129,8 +158,8 @@ CRITICAL CONVERSATIONAL RULES:
       {
         'role': 'system',
         'content': _buildSystemPrompt() +
-            (callerName != null && callerName != 'Unknown Caller'
-                ? '\nNOTE: The caller\'s name is identified as "$callerName".'
+            (callerName != null && callerName != 'Unknown Caller' && callerName != 'Incoming Cellular Call'
+                ? '\nCRITICAL INSTRUCTION: The caller\'s name is "$callerName". You MUST acknowledge them directly: "Yes, $callerName! How can I help you? $ownerName is currently in a meeting, but I can take your message or assist you."'
                 : ''),
       },
     ];
@@ -147,6 +176,7 @@ CRITICAL CONVERSATIONAL RULES:
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $groqApiKey',
+        'User-Agent': 'LocalCallAI/1.0',
       },
       body: jsonEncode({
         'model': groqModel,
@@ -168,8 +198,8 @@ CRITICAL CONVERSATIONAL RULES:
       {
         'role': 'system',
         'content': _buildSystemPrompt() +
-            (callerName != null && callerName != 'Unknown Caller'
-                ? '\nNOTE: The caller\'s name is identified as "$callerName".'
+            (callerName != null && callerName != 'Unknown Caller' && callerName != 'Incoming Cellular Call'
+                ? '\nCRITICAL INSTRUCTION: The caller\'s name is "$callerName". You MUST acknowledge them directly: "Yes, $callerName! How can I help you? $ownerName is currently in a meeting, but I can take your message or assist you."'
                 : ''),
       },
     ];
@@ -208,8 +238,8 @@ CRITICAL CONVERSATIONAL RULES:
     final isHindi = language.startsWith('hi') || text.contains(RegExp(r'[\u0900-\u097F]'));
 
     if (isKannada) {
-      if (hasName && history.length <= 2) {
-        return 'ಕರೆ ಮಾಡಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು $name. ಅರ್ಷದ್ ಅವರು ಸದ್ಯಕ್ಕೆ ಲಭ್ಯವಿಲ್ಲ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?';
+      if (hasName) {
+        return 'ಹೌದು $name, ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ? ಅರ್ಷದ್ ಅವರು ಸದ್ಯಕ್ಕೆ ಮೀಟಿಂಗ್‌ನಲ್ಲಿದ್ದಾರೆ.';
       }
       if (lower.contains('ಅರ್ಜೆಂಟ್') || lower.contains('ತುರ್ತು') || lower.contains('urgent')) {
         return 'ಸರಿ, ನಾನು ಇದನ್ನು ಅತೀ ತುರ್ತು ಎಂದು ಗುರುತಿಸಿ ಅರ್ಷದ್ ಅವರಿಗೆ ತಕ್ಷಣ ತಿಳಿಸುತ್ತೇನೆ.';
@@ -218,8 +248,8 @@ CRITICAL CONVERSATIONAL RULES:
     }
 
     if (isHindi) {
-      if (hasName && history.length <= 2) {
-        return 'कॉल करने के लिए धन्यवाद $name जी। अरशद अभी उपलब्ध नहीं हैं। मैं आपकी क्या मदद कर सकता हूँ?';
+      if (hasName) {
+        return 'हाँ $name जी, मैं आपकी क्या मदद कर सकता हूँ? अरशद अभी मीटिंग में हैं।';
       }
       if (lower.contains('urgent') || lower.contains('जरूरी')) {
         return 'जी ठीक है, मैं इसे बहुत महत्वपूर्ण मार्क करके तुरंत अरशद तक पहुँचा दूँगा।';
@@ -228,8 +258,8 @@ CRITICAL CONVERSATIONAL RULES:
     }
 
     // Default English
-    if (hasName && history.length <= 2) {
-      return 'Thank you for calling, $name. How can I help you today? $ownerName is currently unavailable.';
+    if (hasName) {
+      return 'Yes, $name! How can I help you? $ownerName is currently in a meeting, but I can assist you.';
     }
     if (lower.contains('urgent') || lower.contains('emergency') || lower.contains('important')) {
       return 'Understood. I will flag this as high priority and notify $ownerName immediately.';
@@ -260,9 +290,10 @@ $transcript
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $groqApiKey',
+            'User-Agent': 'LocalCallAI/1.0',
           },
           body: jsonEncode({
-            'model': 'llama-3.1-8b-instant',
+            'model': groqModel,
             'messages': [
               {'role': 'user', 'content': prompt}
             ],

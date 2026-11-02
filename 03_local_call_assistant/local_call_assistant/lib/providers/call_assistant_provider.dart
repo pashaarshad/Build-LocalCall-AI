@@ -33,6 +33,7 @@ class CallAssistantProvider with ChangeNotifier {
   double _soundLevel = 0.0;
   String _liveCallerWords = '';
   Timer? _silencePauseTimer;
+  bool _permissionsGranted = false;
 
   CallAssistantProvider() {
     _init();
@@ -48,6 +49,7 @@ class CallAssistantProvider with ChangeNotifier {
   TurnStatus get turnStatus => _turnStatus;
   double get soundLevel => _soundLevel;
   String get liveCallerWords => _liveCallerWords;
+  bool get permissionsGranted => _permissionsGranted;
   LlmCallAgentService get llmService => _llmService;
   TelegramAttendantService get telegramService => _telegramService;
 
@@ -103,6 +105,7 @@ class CallAssistantProvider with ChangeNotifier {
     });
 
     await _loadPreferences();
+    await checkPermissions();
   }
 
   Future<void> _loadPreferences() async {
@@ -111,7 +114,10 @@ class CallAssistantProvider with ChangeNotifier {
     _ringsThreshold = prefs.getInt('ringsThreshold') ?? 3;
     _assistantMode = prefs.getString('assistantMode') ?? 'Do Not Disturb';
     _selectedLanguage = prefs.getString('selectedLanguage') ?? 'kn_IN';
-    _llmService.groqApiKey = prefs.getString('groqApiKey') ?? '';
+    final savedKey = prefs.getString('groqApiKey');
+    if (savedKey != null && savedKey.trim().isNotEmpty) {
+      _llmService.groqApiKey = savedKey.trim();
+    }
     _llmService.ownerName = prefs.getString('ownerName') ?? 'Arshad';
     _telegramService.botToken = prefs.getString('telegramBotToken') ?? '';
     _telegramService.chatId = prefs.getString('telegramChatId') ?? '';
@@ -142,6 +148,22 @@ class CallAssistantProvider with ChangeNotifier {
 
     await _telephonyService.setAttendantActive(_isAttendantActive);
     await _telephonyService.setRingsThreshold(_ringsThreshold);
+  }
+
+  Future<void> checkPermissions() async {
+    final status = await _telephonyService.checkPermissions();
+    _permissionsGranted = status['allGranted'] ?? false;
+    notifyListeners();
+  }
+
+  Future<void> requestPermissions() async {
+    final status = await _telephonyService.requestPermissions();
+    _permissionsGranted = status['allGranted'] ?? false;
+    notifyListeners();
+  }
+
+  Future<void> openAppSettings() async {
+    await _telephonyService.openAppSettings();
   }
 
   void toggleAttendant(bool value) {

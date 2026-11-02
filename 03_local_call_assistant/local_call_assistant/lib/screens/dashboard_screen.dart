@@ -70,6 +70,10 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Permission Banner if not all permissions are granted
+            if (!prov.permissionsGranted)
+              _buildPermissionBanner(context, prov),
+
             // Master Switch & Attendant Status Card
             _buildAttendantStatusCard(context, prov),
 
@@ -529,6 +533,63 @@ class DashboardScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPermissionBanner(BuildContext context, CallAssistantProvider prov) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.security_update_warning_rounded, color: Color(0xFFF59E0B), size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Phone Call & Auto-Answer Access Required',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'To automatically receive real incoming calls after 3 rings and talk to callers, Android requires Phone State, Call Answering, and Microphone access.',
+            style: TextStyle(fontSize: 12, color: Color(0xFFCBD5E1), height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF59E0B),
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                ),
+                onPressed: () => prov.requestPermissions(),
+                icon: const Icon(Icons.check_circle_rounded, size: 16),
+                label: const Text('Grant Access Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: () => prov.openAppSettings(),
+                child: const Text('App Settings', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

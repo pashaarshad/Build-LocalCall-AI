@@ -1,14 +1,20 @@
 package com.localcallai.local_call_assistant
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +22,8 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.localcallai.call_assistant/telephony"
     private var methodChannel: MethodChannel? = null
+    private var pendingPermissionResult: MethodChannel.Result? = null
+    private val PERMISSION_REQ_CODE = 1001
 
     companion object {
         private const val TAG = "LocalCallMainActivity"
@@ -131,8 +139,76 @@ class MainActivity : FlutterActivity() {
                     answerCall(this)
                     result.success(true)
                 }
+                "checkPermissions" -> {
+                    val status = getPermissionStatus()
+                    result.success(status)
+                }
+                "requestPermissions" -> {
+                    pendingPermissionResult = result
+                    requestRequiredPermissions()
+                }
+                "openAppSettings" -> {
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", packageName, null)
+                    }
+                    startActivity(intent)
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun getRequiredPermissions(): Array<String> {
+        val permissions = mutableListOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.MODIFY_AUDIO_SETTINGS
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            permissions.add(Manifest.permission.ANSWER_PHONE_CALLS)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        return permissions.toTypedArray()
+    }
+
+    private fun getPermissionStatus(): Map<String, Boolean> {
+        val permissions = getRequiredPermissions()
+        var allGranted = true
+        val statusMap = mutableMapOf<String, Boolean>()
+
+        for (perm in permissions) {
+            val isGranted = ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED
+            statusMap[perm] = isGranted
+            if (!isGranted) allGranted = false
+        }
+        statusMap["allGranted"] = allGranted
+        return statusMap
+    }
+
+    private fun requestRequiredPermissions() {
+        val permissions = getRequiredPermissions()
+        val needed = permissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (needed.isEmpty()) {
+            pendingPermissionResult?.success(getPermissionStatus())
+            pendingPermissionResult = null
+        } else {
+            ActivityCompat.requestPermissions(this, needed.toTypedArray(), PERMISSION_REQ_CODE)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQ_CODE) {
+            val status = getPermissionStatus()
+            pendingPermissionResult?.success(status)
+            pendingPermissionResult = null
         }
     }
 
