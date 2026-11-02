@@ -119,6 +119,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Cellular Call Auto-Answer Settings
+            _buildSectionCard(
+              title: 'Cellular Call Auto-Answer Settings',
+              icon: Icons.phone_android_rounded,
+              children: [
+                const Text(
+                  'Auto-Answer After Unattended Rings:',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: prov.ringsThreshold,
+                  dropdownColor: const Color(0xFF1E293B),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFF0A0F1D),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 2, child: Text('2 Rings (~5.5 seconds)')),
+                    DropdownMenuItem(value: 3, child: Text('3 Rings (~8.5 seconds) • Recommended')),
+                    DropdownMenuItem(value: 4, child: Text('4 Rings (~11.5 seconds)')),
+                    DropdownMenuItem(value: 5, child: Text('5 Rings (~14.5 seconds)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) prov.setRingsThreshold(val);
+                  },
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'When you do not pick up on your phone after this many rings, the AI accepts the call automatically on speakerphone, speaks the greeting, and listens in real time.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.3),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
             // Telegram Notification Integration
             _buildSectionCard(
               title: 'Telegram Voice & Call Alerts',

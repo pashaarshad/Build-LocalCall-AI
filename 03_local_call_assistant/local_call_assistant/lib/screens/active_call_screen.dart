@@ -104,11 +104,13 @@ class _ActiveCallScreenState extends State<ActiveCallScreen> with SingleTickerPr
                     ),
                   ),
                   Text(
-                    isIncoming ? 'Ringing...' : _formatTimer(_seconds),
-                    style: const TextStyle(
+                    isIncoming
+                        ? 'Ringing (Ring ${prov.currentRingCount > 0 ? prov.currentRingCount : 1} of ${prov.ringsThreshold})...'
+                        : _formatTimer(_seconds),
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isIncoming ? const Color(0xFFF59E0B) : Colors.white,
                     ),
                   ),
                 ],

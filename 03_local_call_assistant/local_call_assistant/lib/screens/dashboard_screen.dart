@@ -192,10 +192,32 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             isActive
-                ? 'Incoming calls will be answered automatically. The AI listens in milliseconds, replies naturally, and logs full summaries.'
+                ? 'Incoming phone calls will be auto-answered after ${prov.ringsThreshold} rings. The AI listens in milliseconds, maintains context, acknowledges caller names, and logs full debriefs.'
                 : 'Turn on to let the AI attend your incoming phone calls while you are busy, driving, or in meetings.',
             style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8), height: 1.4),
           ),
+          if (isActive) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.ring_volume_rounded, size: 14, color: Color(0xFF22D3EE)),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Real Phone Call Trigger: Auto-Answer after ${prov.ringsThreshold} rings',
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF22D3EE)),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

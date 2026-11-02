@@ -13,15 +13,22 @@ class LlmCallAgentService {
 
   static const String systemPromptTemplate = '''
 You are {assistantName}, the personal voice call assistant for {ownerName}.
-{ownerName} is currently unavailable (driving, in an important meeting, or Do-Not-Disturb is on).
-Your job is to courteously answer this phone call on {ownerName}'s behalf.
+{ownerName} is currently unavailable (e.g., in an important meeting, driving, or Do-Not-Disturb is on).
+Your job is to courteously and intelligently answer this phone call on {ownerName}'s behalf.
 
-RULES:
-1. Speak naturally like a real human assistant.
-2. KEEP RESPONSES VERY SHORT (1 to 2 sentences maximum), since you are speaking on a live voice phone call.
-3. Politely ask who is calling, what the call is regarding, and if they'd like to leave an urgent message.
-4. If the caller speaks Kannada, respond in Kannada. If they speak Hindi, respond in Hindi. If English, respond in English.
-5. NEVER recite long bullet points or markdown. Plain spoken conversational text only.
+CRITICAL CONVERSATIONAL RULES:
+1. Speak naturally and warmly like a live human executive assistant.
+2. KEEP RESPONSES CONCISE (1 to 2 sentences maximum), because this is a live spoken phone call.
+3. CONTEXT & NAME MEMORY:
+   - When the caller tells you their name (e.g. "I am Rahul", "My name is John", "This is Dr. Rao", "ನಾನು ರಮೇಶ್", "मैं विजय बोल रहा हूँ"):
+     ACKNOWLEDGE THEM BY NAME IMMEDIATELY: "Thank you for calling [Name]. How can I help you? {ownerName} is currently unavailable."
+   - Never ask for their name again once they have stated it. Use their name courteously in the conversation.
+4. When they explain why they are calling, ask if they'd like to leave a message or note if it is urgent.
+5. LANGUAGE ADAPTABILITY:
+   - If caller speaks Kannada, respond in natural spoken Kannada.
+   - If caller speaks Hindi, respond in Hindi.
+   - If caller speaks English, respond in English.
+6. Plain conversational speech only — NEVER output markdown, emojis, asterisks, or bullet points.
 ''';
 
   String _buildSystemPrompt() {
@@ -30,15 +37,75 @@ RULES:
         .replaceAll('{ownerName}', ownerName);
   }
 
+  // Extract caller name from text if present
+  String? extractCallerName(String text) {
+    final clean = text.trim();
+
+    // English patterns
+    final enPatterns = [
+      RegExp(r"(?:my name is|i am|this is|it's|its)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)", caseSensitive: false),
+      RegExp(r"(?:speaking with|talk to)\s+([A-Z][a-z]+)", caseSensitive: false),
+      RegExp(r"^([A-Z][a-z]+)\s+here", caseSensitive: false),
+    ];
+
+    for (final p in enPatterns) {
+      final match = p.firstMatch(clean);
+      if (match != null && match.groupCount >= 1) {
+        final name = match.group(1)?.trim();
+        if (name != null && name.length > 1 && !_isCommonWord(name)) {
+          return _capitalize(name);
+        }
+      }
+    }
+
+    // Kannada patterns
+    final knPatterns = [
+      RegExp(r"ನಾನು\s+([^\s,]+)", caseSensitive: false),
+      RegExp(r"ನನ್ನ ಹೆಸರು\s+([^\s,]+)", caseSensitive: false),
+    ];
+    for (final p in knPatterns) {
+      final match = p.firstMatch(clean);
+      if (match != null && match.groupCount >= 1) {
+        return match.group(1)?.trim();
+      }
+    }
+
+    // Hindi patterns
+    final hiPatterns = [
+      RegExp(r"मैं\s+([^\s,]+)\s+बोल", caseSensitive: false),
+      RegExp(r"मेरा नाम\s+([^\s,]+)", caseSensitive: false),
+    ];
+    for (final p in hiPatterns) {
+      final match = p.firstMatch(clean);
+      if (match != null && match.groupCount >= 1) {
+        return match.group(1)?.trim();
+      }
+    }
+
+    return null;
+  }
+
+  bool _isCommonWord(String word) {
+    final lower = word.toLowerCase();
+    const common = {'calling', 'asking', 'here', 'busy', 'urgent', 'available', 'just', 'hello', 'hi'};
+    return common.contains(lower);
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s.split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
+  }
+
   Future<String> generateCallReply({
     required List<CallTurn> history,
     required String lastCallerText,
+    String? callerName,
     String language = 'kn_IN',
   }) async {
-    // 1. Try Groq if API key is provided
+    // 1. Try Groq for ultra-low latency (200ms)
     if (groqApiKey.isNotEmpty) {
       try {
-        final reply = await _generateWithGroq(history, lastCallerText);
+        final reply = await _generateWithGroq(history, lastCallerText, callerName);
         if (reply.isNotEmpty) return reply;
       } catch (e) {
         debugPrint('Groq call error: $e');
@@ -47,19 +114,25 @@ RULES:
 
     // 2. Try Local Ollama
     try {
-      final reply = await _generateWithOllama(history, lastCallerText);
+      final reply = await _generateWithOllama(history, lastCallerText, callerName);
       if (reply.isNotEmpty) return reply;
     } catch (e) {
       debugPrint('Ollama call error: $e');
     }
 
-    // 3. Fallback Smart Assistant Engine (Works 100% offline with zero dependencies)
-    return _generateOfflineFallback(history, lastCallerText, language);
+    // 3. Fallback Smart Assistant Engine (100% Offline)
+    return _generateOfflineFallback(history, lastCallerText, callerName, language);
   }
 
-  Future<String> _generateWithGroq(List<CallTurn> history, String lastCallerText) async {
+  Future<String> _generateWithGroq(List<CallTurn> history, String lastCallerText, String? callerName) async {
     final messages = <Map<String, String>>[
-      {'role': 'system', 'content': _buildSystemPrompt()},
+      {
+        'role': 'system',
+        'content': _buildSystemPrompt() +
+            (callerName != null && callerName != 'Unknown Caller'
+                ? '\nNOTE: The caller\'s name is identified as "$callerName".'
+                : ''),
+      },
     ];
 
     for (final turn in history) {
@@ -90,9 +163,15 @@ RULES:
     return '';
   }
 
-  Future<String> _generateWithOllama(List<CallTurn> history, String lastCallerText) async {
+  Future<String> _generateWithOllama(List<CallTurn> history, String lastCallerText, String? callerName) async {
     final messages = <Map<String, String>>[
-      {'role': 'system', 'content': _buildSystemPrompt()},
+      {
+        'role': 'system',
+        'content': _buildSystemPrompt() +
+            (callerName != null && callerName != 'Unknown Caller'
+                ? '\nNOTE: The caller\'s name is identified as "$callerName".'
+                : ''),
+      },
     ];
 
     for (final turn in history) {
@@ -120,24 +199,27 @@ RULES:
     return '';
   }
 
-  String _generateOfflineFallback(List<CallTurn> history, String text, String language) {
+  String _generateOfflineFallback(List<CallTurn> history, String text, String? callerName, String language) {
     final lower = text.toLowerCase();
+    final name = callerName ?? extractCallerName(text);
+    final hasName = name != null && name != 'Unknown Caller';
+
     final isKannada = language.startsWith('kn') || text.contains(RegExp(r'[\u0C80-\u0CFF]'));
     final isHindi = language.startsWith('hi') || text.contains(RegExp(r'[\u0900-\u097F]'));
 
     if (isKannada) {
-      if (lower.contains('ಹಲೋ') || lower.contains('ನಮಸ್ಕಾರ') || history.length <= 1) {
-        return 'ನಮಸ್ಕಾರ, ನಾನು ಅರ್ಷದ್ ಅವರ AI ಅಸಿಸ್ಟೆಂಟ್. ಅರ್ಷದ್ ಅವರು ಸದ್ಯಕ್ಕೆ ಬ್ಯುಸಿ ಇದ್ದಾರೆ. ತಾವು ಯಾರು ಮತ್ತು ಯಾವ ವಿಷಯವಾಗಿ ಕರೆ ಮಾಡಿದ್ದೀರಿ ಎಂದು ತಿಳಿಸಬಹುದೇ?';
+      if (hasName && history.length <= 2) {
+        return 'ಕರೆ ಮಾಡಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು $name. ಅರ್ಷದ್ ಅವರು ಸದ್ಯಕ್ಕೆ ಲಭ್ಯವಿಲ್ಲ. ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?';
       }
-      if (lower.contains('ಅರ್ಜೆಂಟ್') || lower.contains('ತುರ್ತು') || lower.contains('emergency')) {
-        return 'ಸರಿ, ನಾನು ಇದನ್ನು ಅತೀ ತುರ್ತು ಎಂದು ಗುರುತಿಸಿ ತಕ್ಷಣವೇ ಅರ್ಷದ್ ಅವರಿಗೆ ತಲುಪಿಸುತ್ತೇನೆ.';
+      if (lower.contains('ಅರ್ಜೆಂಟ್') || lower.contains('ತುರ್ತು') || lower.contains('urgent')) {
+        return 'ಸರಿ, ನಾನು ಇದನ್ನು ಅತೀ ತುರ್ತು ಎಂದು ಗುರುತಿಸಿ ಅರ್ಷದ್ ಅವರಿಗೆ ತಕ್ಷಣ ತಿಳಿಸುತ್ತೇನೆ.';
       }
-      return 'ಖಂಡಿತ, ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ನಾನು ಬರೆದುಕೊಂಡಿದ್ದೇನೆ. ಅರ್ಷದ್ ಅವರಿಗೆ ಕೂಡಲೇ ತಿಳಿಸುತ್ತೇನೆ. ಧನ್ಯವಾದಗಳು.';
+      return 'ಖಂಡಿತ, ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ನಾನು ಬರೆದುಕೊಂಡಿದ್ದೇನೆ. ಅರ್ಷದ್ ಅವರಿಗೆ ಕೂಡಲೇ ತಲುಪಿಸುತ್ತೇನೆ.';
     }
 
     if (isHindi) {
-      if (lower.contains('नमस्ते') || lower.contains('हेलो') || history.length <= 1) {
-        return 'नमस्ते, मैं अरशद का एआई असिस्टेंट हूँ। अरशद अभी व्यस्त हैं। कृपया बताएं आप कौन बोल रहे हैं और क्या काम है?';
+      if (hasName && history.length <= 2) {
+        return 'कॉल करने के लिए धन्यवाद $name जी। अरशद अभी उपलब्ध नहीं हैं। मैं आपकी क्या मदद कर सकता हूँ?';
       }
       if (lower.contains('urgent') || lower.contains('जरूरी')) {
         return 'जी ठीक है, मैं इसे बहुत महत्वपूर्ण मार्क करके तुरंत अरशद तक पहुँचा दूँगा।';
@@ -146,13 +228,13 @@ RULES:
     }
 
     // Default English
-    if (lower.contains('hello') || lower.contains('hi') || history.length <= 1) {
-      return 'Hello! I am Arshad\'s AI assistant. Arshad is currently tied up. May I know who is calling and what this is regarding?';
+    if (hasName && history.length <= 2) {
+      return 'Thank you for calling, $name. How can I help you today? $ownerName is currently unavailable.';
     }
     if (lower.contains('urgent') || lower.contains('emergency') || lower.contains('important')) {
-      return 'Understood. I will flag this as high priority and notify Arshad immediately.';
+      return 'Understood. I will flag this as high priority and notify $ownerName immediately.';
     }
-    return 'Got it. I have noted your message and will pass it along to Arshad right away. Have a wonderful day!';
+    return 'Got it. I have noted your message and will pass it along to $ownerName right away. Thank you!';
   }
 
   Future<Map<String, dynamic>> summarizeCall(CallSession session) async {
@@ -161,6 +243,7 @@ RULES:
     final prompt = '''
 Summarize the following phone call in JSON format:
 {
+  "callerName": "Extracted name of caller if mentioned, or '${session.callerName}'",
   "summary": "2-sentence executive summary of the call",
   "urgency": "low | medium | high",
   "actionItems": ["action item 1", "action item 2"]
@@ -198,11 +281,15 @@ $transcript
     }
 
     // Fallback Summary
-    final isUrgent = transcript.toLowerCase().contains('urgent') || transcript.toLowerCase().contains('emergency') || transcript.toLowerCase().contains('ತುರ್ತು');
+    final isUrgent = transcript.toLowerCase().contains('urgent') ||
+        transcript.toLowerCase().contains('emergency') ||
+        transcript.toLowerCase().contains('ತುರ್ತು');
     return {
-      'summary': 'Call from ${session.callerName} (${session.callerNumber}). Discussed: ${session.turns.isNotEmpty ? session.turns.last.text : "Brief greeting"}',
+      'callerName': session.callerName,
+      'summary':
+          'Call from ${session.callerName} (${session.callerNumber}). Topic: ${session.turns.isNotEmpty ? session.turns.last.text : "Brief greeting"}',
       'urgency': isUrgent ? 'high' : 'medium',
-      'actionItems': ['Review call transcript', 'Follow up with caller if needed'],
+      'actionItems': ['Review call transcript', 'Follow up with ${session.callerName}'],
     };
   }
 }
